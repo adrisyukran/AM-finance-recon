@@ -18,6 +18,7 @@ from flask import (
 
 from werkzeug.utils import secure_filename
 import pandas as pd
+import numpy as np
 from datetime import datetime
 import uuid
 
@@ -45,6 +46,54 @@ exporter = Exporter(Config)
 
 
 # ==================== UTILITY FUNCTIONS ====================
+
+
+def convert_to_serializable(obj):
+    """
+    Convert numpy/pandas types to native Python types for JSON serialization
+    
+    Args:
+        obj: Object to convert (can be dict, list, or primitive type)
+        
+    Returns:
+        Object with all numpy/pandas types converted to native Python types
+    """
+    # Handle None first
+    if obj is None:
+        return None
+    
+    # Check for pandas NA/NaN values
+    try:
+        if pd.isna(obj):
+            return None
+    except (TypeError, ValueError):
+        pass
+    
+    # Handle collections
+    if isinstance(obj, dict):
+        return {key: convert_to_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [convert_to_serializable(item) for item in obj]
+    
+    # Handle numpy/pandas types
+    elif isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
+        return float(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, (pd.Timestamp, datetime)):
+        return obj.isoformat()
+    
+    # Handle base Python types that are already serializable
+    elif isinstance(obj, (int, float, str, bool)):
+        return obj
+    
+    # If we can't convert it, return as string
+    else:
+        return obj
 
 
 def get_session_id():
@@ -215,9 +264,15 @@ def auto_match():
         summary = file_handler.get_summary_statistics(updated_df)
         balance_stats = balance_calculator.calculate_total_balance(valid_matches)
 
+        # Convert to serializable format before storing
+        valid_matches_serializable = convert_to_serializable(valid_matches)
+        review_items_serializable = convert_to_serializable(review_items)
+        summary_serializable = convert_to_serializable(summary)
+        balance_stats_serializable = convert_to_serializable(balance_stats)
+
         # Store results in session
-        set_session_data("matches", json.dumps(valid_matches, default=str))
-        set_session_data("review_items", json.dumps(review_items, default=str))
+        set_session_data("matches", json.dumps(valid_matches_serializable))
+        set_session_data("review_items", json.dumps(review_items_serializable))
         set_session_data("updated_df_json", updated_df.to_json(orient="split"))
         set_session_data(
             "unmatched_expenses_json", unmatched_expenses.to_json(orient="split")
@@ -231,8 +286,8 @@ def auto_match():
                 "success": True,
                 "matched_count": len(valid_matches),
                 "review_count": len(review_items),
-                "summary": summary,
-                "balance_stats": balance_stats,
+                "summary": summary_serializable,
+                "balance_stats": balance_stats_serializable,
             }
         )
 
@@ -358,8 +413,12 @@ def confirm_match():
             unmatched_revenues, unmatched_expenses
         )
 
+        # Convert to serializable format
+        matches_serializable = convert_to_serializable(matches)
+        review_items_serializable = convert_to_serializable(review_items)
+
         # Update session
-        set_session_data("matches", json.dumps(matches, default=str))
+        set_session_data("matches", json.dumps(matches_serializable))
         set_session_data("updated_df_json", updated_df.to_json(orient="split"))
         set_session_data(
             "unmatched_expenses_json", unmatched_expenses.to_json(orient="split")
@@ -367,7 +426,7 @@ def confirm_match():
         set_session_data(
             "unmatched_revenues_json", unmatched_revenues.to_json(orient="split")
         )
-        set_session_data("review_items", json.dumps(review_items, default=str))
+        set_session_data("review_items", json.dumps(review_items_serializable))
 
         return jsonify(
             {
@@ -560,8 +619,8 @@ def get_summary():
         return jsonify(
             {
                 "success": True,
-                "summary": summary,
-                "balance_stats": balance_stats,
+                "summary": convert_to_serializable(summary),
+                "balance_stats": convert_to_serializable(balance_stats),
             }
         )
 

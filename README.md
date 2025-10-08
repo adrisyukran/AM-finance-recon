@@ -86,8 +86,9 @@ This tool automates this process with intelligent entity matching and AI-assiste
 - **Progress tracking**: Visual progress bars and step indicators
 - **Real-time validation**: Instant feedback on selections and matches
 - **Responsive design**: Works on desktop and mobile devices
-
+<!--
 ## 🚀 Installation
+
 
 ### Prerequisites
 
@@ -128,8 +129,8 @@ python app.py
 ```
 
 The application will start at `http://localhost:5000`
-
-## 📖 Usage Guide
+-->
+<!--## 📖 Usage Guide
 
 ### Step 1: Upload Your File
 
@@ -198,7 +199,7 @@ Choose your preferred export format:
   - Unmatched transactions
   - Match details
 - Best for: Comprehensive analysis and reporting
-
+ -->
 ## 📁 Project Structure
 
 ```
@@ -331,14 +332,14 @@ MG_0002       | ...
 
 **Issue**: Session lost / Data disappeared
 - **Solution**: Session expires after 1 hour, restart process if needed
-
+<!--
 ### Configuration
 
 Edit `config.py` to adjust:
 - `FUZZY_MATCH_THRESHOLD`: Change sensitivity (default: 0.80)
 - `HIGH_CONFIDENCE_THRESHOLD`: Auto-confirm threshold (default: 0.90)
 - `BALANCE_TOLERANCE`: Acceptable balance difference (default: 0.01)
-
+-->
 ## 📊 Example Data Format
 
 ### Input CSV Example
@@ -409,4 +410,4 @@ For issues, questions, or suggestions:
 
 ---
 
-**Made with ❤️ for finance professionals who hate manual reconciliation**
+**Made with ❤️ for finance professionals ❤️ who hate manual reconciliation**

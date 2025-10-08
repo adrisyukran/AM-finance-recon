@@ -15,7 +15,7 @@ from flask import (
     redirect,
     url_for,
 )
-from numpy._core.strings import _StringDTypeOrUnicodeArray
+
 from werkzeug.utils import secure_filename
 import pandas as pd
 from datetime import datetime
@@ -25,15 +25,17 @@ from config import Config
 from modules import FileHandler, EntityMatcher, BalanceCalculator, Exporter
 from flask_session import Session
 
+
+# Initialize Flask app
+app = Flask(__name__)
+app.config.from_object(Config)
+Config.init_app(app)
+
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_FILE_DIR"] = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "data", "sessions"
 )
 Session(app)
-# Initialize Flask app
-app = Flask(__name__)
-app.config.from_object(Config)
-Config.init_app(app)
 
 # Initialize modules
 file_handler = FileHandler(Config)

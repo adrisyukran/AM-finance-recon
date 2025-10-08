@@ -23,6 +23,28 @@ A powerful Python-based web application that automates the finance reconciliatio
 
 Finance Reconciliation Automation streamlines the tedious process of matching financial transactions. It automatically identifies and groups related expenses and revenues, helping you achieve balanced accounts quickly and accurately.
 
+## 📸 Screenshots
+
+### Upload Interface
+![Upload Page](docs/screenshots/upload-page.png)
+*Modern, clean interface with drag-and-drop file upload functionality*
+
+### Column Selection
+![Column Selection](docs/screenshots/column-selection.png)
+*Smart column detection with suggested mappings for amount and description fields*
+
+### Auto-Match Results
+![Match Results](docs/screenshots/match-results.png)
+*Comprehensive view of matched transactions with confidence scores and balance validation*
+
+### Manual Review
+![Manual Review](docs/screenshots/manual-review.png)
+*AI-assisted manual matching with similarity scores and keyword highlighting*
+
+### Export Options
+![Export Options](docs/screenshots/export-options.png)
+*Flexible export formats including grouped files, updated originals, and detailed reports*
+
 ### The Problem It Solves
 
 Traditional reconciliation requires manually matching transactions like:
@@ -376,7 +398,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 For issues, questions, or suggestions:
 - Open an issue on GitHub
-- Email: your.email@example.com
+- Email: hello@adri.my
 
 ## 🙏 Acknowledgments
 

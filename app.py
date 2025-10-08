@@ -4,6 +4,7 @@ Finance Reconciliation Automation - Main Flask Application
 
 import os
 import json
+from io import StringIO
 from flask import (
     Flask,
     render_template,
@@ -14,6 +15,7 @@ from flask import (
     redirect,
     url_for,
 )
+from numpy._core.strings import _StringDTypeOrUnicodeArray
 from werkzeug.utils import secure_filename
 import pandas as pd
 from datetime import datetime
@@ -28,10 +30,10 @@ app.config.from_object(Config)
 Config.init_app(app)
 
 # Initialize modules
-file_handler = FileHandler(app.config)
-entity_matcher = EntityMatcher(app.config)
-balance_calculator = BalanceCalculator(app.config)
-exporter = Exporter(app.config)
+file_handler = FileHandler(Config)
+entity_matcher = EntityMatcher(Config)
+balance_calculator = BalanceCalculator(Config)
+exporter = Exporter(Config)
 
 
 # ==================== UTILITY FUNCTIONS ====================
@@ -148,7 +150,7 @@ def select_columns():
                 400,
             )
 
-        df = pd.read_json(df_json, orient="split")
+        df = pd.read_json(StringIO(df_json), orient="split")
 
         # Process transactions
         success, message, processed_df = file_handler.process_transactions(
@@ -181,7 +183,7 @@ def auto_match():
                 400,
             )
 
-        processed_df = pd.read_json(processed_df_json, orient="split")
+        processed_df = pd.read_json(StringIO(processed_df_json), orient="split")
 
         # Perform auto matching
         matches, unmatched_expenses, unmatched_revenues = entity_matcher.auto_match_all(
@@ -288,10 +290,14 @@ def confirm_match():
         unmatched_expenses_json = get_session_data("unmatched_expenses_json")
         unmatched_revenues_json = get_session_data("unmatched_revenues_json")
 
-        updated_df = pd.read_json(updated_df_json, orient="split")
+        updated_df = pd.read_json(StringIO(updated_df_json), orient="split")
         matches = json.loads(matches_json)
-        unmatched_expenses = pd.read_json(unmatched_expenses_json, orient="split")
-        unmatched_revenues = pd.read_json(unmatched_revenues_json, orient="split")
+        unmatched_expenses = pd.read_json(
+            StringIO(unmatched_expenses_json), orient="split"
+        )
+        unmatched_revenues = pd.read_json(
+            StringIO(unmatched_revenues_json), orient="split"
+        )
 
         # Find revenue and expenses
         revenue = unmatched_revenues[
@@ -377,7 +383,7 @@ def export_options_page():
     if not updated_df_json:
         return redirect(url_for("index"))
 
-    updated_df = pd.read_json(updated_df_json, orient="split")
+    updated_df = pd.read_json(StringIO(updated_df_json), orient="split")
     matches = json.loads(matches_json)
 
     summary = file_handler.get_summary_statistics(updated_df)
@@ -405,7 +411,7 @@ def export_file():
                 400,
             )
 
-        updated_df = pd.read_json(updated_df_json, orient="split")
+        updated_df = pd.read_json(StringIO(updated_df_json), orient="split")
         matches = json.loads(matches_json)
 
         # Generate output filename
@@ -476,7 +482,7 @@ def export_report():
                 400,
             )
 
-        updated_df = pd.read_json(updated_df_json, orient="split")
+        updated_df = pd.read_json(StringIO(updated_df_json), orient="split")
         matches = json.loads(matches_json)
 
         # Generate report filename
@@ -537,7 +543,7 @@ def get_summary():
                 400,
             )
 
-        updated_df = pd.read_json(updated_df_json, orient="split")
+        updated_df = pd.read_json(StringIO(updated_df_json), orient="split")
         matches = json.loads(matches_json)
 
         summary = file_handler.get_summary_statistics(updated_df)

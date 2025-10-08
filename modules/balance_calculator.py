@@ -414,7 +414,7 @@ class BalanceCalculator:
                 rev_idx = revenue.get("original_index")
                 if rev_idx is not None and rev_idx in df_copy.index:
                     df_copy.at[rev_idx, "match_status"] = "matched"
-                    df_copy.at[rev_idx, "match_group_id"] = match_group_id
+                    df_copy.at[rev_idx, "match_group_id"] = str(match_group_id)
                     df_copy.at[rev_idx, "match_confidence"] = confidence
 
             # Update expense transactions

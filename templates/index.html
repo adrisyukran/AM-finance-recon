@@ -31,31 +31,43 @@
 <div id="upload-section">
     <div class="card">
         <div class="card-header">
-            📁 Upload Your Finance File
+            📄 Upload Your Finance File
         </div>
-        <p style="color: #6c757d; margin-bottom: 20px;">
+        <p style="color: #6b7280; margin-bottom: 24px; font-size: 0.95em;">
             Upload a CSV or Excel file containing your expense and revenue transactions.
-            The file should have columns for transaction amounts and descriptions.
         </p>
 
         <div class="form-group">
-            <label class="form-label">Select File:</label>
-            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" class="form-control"
-                   style="padding: 10px; cursor: pointer;">
+            <label class="form-label">Select File</label>
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">☁️</div>
+                <div class="upload-text">
+                    <span class="upload-link">Upload a file</span> or drag and drop
+                </div>
+                <div class="upload-hint">CSV, XLSX, XLS up to 10MB</div>
+                <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;">
+            </div>
         </div>
 
-        <div class="alert alert-info">
-            <strong>📋 Supported Formats:</strong> CSV (.csv), Excel (.xlsx, .xls)<br>
-            <strong>💡 Tip:</strong> Make sure your file has a column with transaction amounts (positive for revenue, negative for expenses) and a description column.
+        <div class="info-box">
+            <div class="info-icon">ℹ️</div>
+            <div class="info-content">
+                <strong>Tip:</strong> Make sure your file has a column with transaction amounts (positive for revenue, negative for expenses) and a description column.
+            </div>
         </div>
 
-        <button id="uploadBtn" class="btn btn-primary" onclick="uploadFile()" disabled>
-            Upload & Analyze File
-        </button>
+        <div style="display: flex; gap: 12px; margin-top: 32px;">
+            <button id="uploadBtn" class="btn btn-primary" onclick="uploadFile()" disabled>
+                📊 Upload & Analyze File
+            </button>
+            <button class="btn btn-secondary" onclick="location.reload()">
+                Start Over
+            </button>
+        </div>
 
         <div id="uploadLoading" class="loading">
             <div class="spinner"></div>
-            <p style="margin-top: 15px;">Uploading and analyzing file...</p>
+            <p style="margin-top: 15px; color: #6b7280;">Uploading and analyzing file...</p>
         </div>
     </div>
 </div>
@@ -65,13 +77,13 @@
         <div class="card-header">
             🔧 Select Columns for Matching
         </div>
-        <p style="color: #6c757d; margin-bottom: 20px;">
+        <p style="color: #6b7280; margin-bottom: 24px; font-size: 0.95em;">
             Select the columns that will be used for entity matching and balance calculation.
         </p>
 
-        <div id="fileInfo" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <strong>File:</strong> <span id="fileName"></span><br>
-            <strong>Total Columns:</strong> <span id="columnCount"></span>
+        <div id="fileInfo" style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #e5e7eb;">
+            <strong style="color: #1f2937;">File:</strong> <span id="fileName" style="color: #6b7280;"></span><br>
+            <strong style="color: #1f2937;">Total Columns:</strong> <span id="columnCount" style="color: #6b7280;"></span>
         </div>
 
         <div class="form-group">
@@ -79,7 +91,7 @@
             <select id="amountColumn" class="form-control">
                 <option value="">-- Select Amount Column --</option>
             </select>
-            <small style="color: #6c757d; display: block; margin-top: 5px;">
+            <small style="color: #6b7280; display: block; margin-top: 8px; font-size: 0.9em;">
                 Column containing transaction amounts (negative for expenses, positive for revenue)
             </small>
         </div>
@@ -89,14 +101,14 @@
             <select id="descriptionColumn" class="form-control">
                 <option value="">-- Select Description Column --</option>
             </select>
-            <small style="color: #6c757d; display: block; margin-top: 5px;">
+            <small style="color: #6b7280; display: block; margin-top: 8px; font-size: 0.9em;">
                 Column containing transaction descriptions for entity matching
             </small>
         </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 30px;">
+        <div style="display: flex; gap: 12px; margin-top: 32px;">
             <button class="btn btn-primary" onclick="startMatching()">
-                Start Matching Process
+                ▶️ Start Matching Process
             </button>
             <button class="btn btn-secondary" onclick="location.reload()">
                 Upload Different File
@@ -105,37 +117,146 @@
 
         <div id="columnLoading" class="loading">
             <div class="spinner"></div>
-            <p style="margin-top: 15px;">Processing transactions...</p>
+            <p style="margin-top: 15px; color: #6b7280;">Processing transactions...</p>
         </div>
     </div>
 </div>
 
 <style>
-    #fileInput {
-        border: 2px dashed #667eea;
-        background: #f8f9ff;
+    .upload-zone {
+        border: 2px dashed #d1d5db;
+        border-radius: 12px;
+        padding: 48px 24px;
+        text-align: center;
+        background: #fafafa;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .upload-zone:hover {
+        border-color: #10b981;
+        background: #f0fdf4;
+    }
+
+    .upload-zone.dragover {
+        border-color: #10b981;
+        background: #f0fdf4;
+        transform: scale(1.01);
+    }
+
+    .upload-icon {
+        font-size: 3em;
+        margin-bottom: 16px;
+        opacity: 0.6;
+    }
+
+    .upload-text {
+        font-size: 1em;
+        color: #6b7280;
+        margin-bottom: 8px;
+    }
+
+    .upload-link {
+        color: #10b981;
+        font-weight: 600;
         cursor: pointer;
     }
 
-    #fileInput:hover {
-        background: #f0f2ff;
-        border-color: #5568d3;
+    .upload-link:hover {
+        color: #059669;
+        text-decoration: underline;
     }
 
-    .form-group small {
+    .upload-hint {
         font-size: 0.9em;
+        color: #9ca3af;
+    }
+
+    .info-box {
+        display: flex;
+        gap: 12px;
+        padding: 16px;
+        background: #f0fdf4;
+        border: 1px solid #d1fae5;
+        border-left: 4px solid #10b981;
+        border-radius: 8px;
+        margin-top: 24px;
+    }
+
+    .info-icon {
+        font-size: 1.3em;
+        flex-shrink: 0;
+    }
+
+    .info-content {
+        color: #065f46;
+        font-size: 0.95em;
+        line-height: 1.5;
+    }
+
+    .info-content strong {
+        font-weight: 600;
     }
 </style>
 
 <script>
-    // Enable upload button when file is selected
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-        const uploadBtn = document.getElementById('uploadBtn');
-        uploadBtn.disabled = !e.target.files.length;
+    // Get elements
+    const fileInput = document.getElementById('fileInput');
+    const uploadZone = document.getElementById('uploadZone');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    // Click to upload
+    uploadZone.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // File input change
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            uploadBtn.disabled = false;
+            const fileName = e.target.files[0].name;
+            uploadZone.querySelector('.upload-text').innerHTML = 
+                `<span class="upload-link">${fileName}</span> selected`;
+        }
+    });
+
+    // Drag and drop handlers
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, () => {
+            uploadZone.classList.add('dragover');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, () => {
+            uploadZone.classList.remove('dragover');
+        });
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+
+        if (files.length > 0) {
+            fileInput.files = files;
+            uploadBtn.disabled = false;
+            const fileName = files[0].name;
+            uploadZone.querySelector('.upload-text').innerHTML = 
+                `<span class="upload-link">${fileName}</span> selected`;
+        }
     });
 
     async function uploadFile() {
-        const fileInput = document.getElementById('fileInput');
         const file = fileInput.files[0];
 
         if (!file) {
@@ -145,7 +266,7 @@
 
         // Show loading
         showLoading('uploadLoading');
-        document.getElementById('uploadBtn').disabled = true;
+        uploadBtn.disabled = true;
 
         // Create form data
         const formData = new FormData();
@@ -179,11 +300,11 @@
                 showAlert(data.message, 'success');
             } else {
                 showAlert(data.message, 'error');
-                document.getElementById('uploadBtn').disabled = false;
+                uploadBtn.disabled = false;
             }
         } catch (error) {
             showAlert('Error uploading file: ' + error.message, 'error');
-            document.getElementById('uploadBtn').disabled = false;
+            uploadBtn.disabled = false;
         } finally {
             hideLoading('uploadLoading');
         }
@@ -282,40 +403,5 @@
             hideLoading('columnLoading');
         }
     }
-
-    // Handle drag and drop for file input
-    const fileInput = document.getElementById('fileInput');
-    const uploadSection = document.getElementById('upload-section');
-
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        uploadSection.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-        uploadSection.addEventListener(eventName, () => {
-            uploadSection.style.opacity = '0.7';
-        });
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        uploadSection.addEventListener(eventName, () => {
-            uploadSection.style.opacity = '1';
-        });
-    });
-
-    uploadSection.addEventListener('drop', (e) => {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-
-        if (files.length > 0) {
-            fileInput.files = files;
-            document.getElementById('uploadBtn').disabled = false;
-        }
-    });
 </script>
 {% endblock %}

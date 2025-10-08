@@ -403,6 +403,10 @@ class BalanceCalculator:
             Updated DataFrame with match group assignments
         """
         df_copy = df.copy()
+        
+        # Ensure match_group_id column has correct dtype to avoid FutureWarning
+        if "match_group_id" in df_copy.columns:
+            df_copy["match_group_id"] = df_copy["match_group_id"].astype(object)
 
         for idx, match in enumerate(matches):
             match_group_id = self.calculate_match_group_id(idx)

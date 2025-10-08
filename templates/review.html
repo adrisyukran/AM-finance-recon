@@ -1,0 +1,632 @@
+{% extends "base.html" %}
+
+{% block title %}Review Unmatched - Finance Reconciliation{% endblock %}
+
+{% block navigation %}
+<div class="nav-steps">
+    <div class="step completed">
+        <div class="step-number">1</div>
+        <span>Upload File</span>
+    </div>
+    <div class="step completed">
+        <div class="step-number">2</div>
+        <span>Select Columns</span>
+    </div>
+    <div class="step completed">
+        <div class="step-number">3</div>
+        <span>Auto Match</span>
+    </div>
+    <div class="step active">
+        <div class="step-number">4</div>
+        <span>Review</span>
+    </div>
+    <div class="step">
+        <div class="step-number">5</div>
+        <span>Export</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="loadingSection" class="loading active">
+    <div class="spinner"></div>
+    <p style="margin-top: 15px;">Loading review items...</p>
+</div>
+
+<div id="reviewSection" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            🔍 Manual Review Required
+        </div>
+        <p style="color: #6c757d; margin-bottom: 20px;">
+            The following transactions need manual matching. We've suggested potential matches based on similarity and keywords.
+            Review each suggestion and confirm the match.
+        </p>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar" style="width: 0%;">
+                <span id="progressText">0 of 0</span>
+            </div>
+        </div>
+        <p style="text-align: center; color: #6c757d; margin-top: 10px;">
+            Review Progress
+        </p>
+    </div>
+
+    <div id="reviewItemsContainer"></div>
+
+    <div id="noReviewItems" class="card" style="display: none; text-align: center; padding: 40px;">
+        <div style="font-size: 3em; margin-bottom: 20px;">🎉</div>
+        <h2>All Items Reviewed!</h2>
+        <p style="color: #6c757d; margin: 20px 0;">
+            All transactions have been matched. You can now proceed to export your reconciliation results.
+        </p>
+        <button class="btn btn-success" onclick="proceedToExport()">
+            Proceed to Export
+        </button>
+    </div>
+
+    <div id="actionButtons" style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
+        <button class="btn btn-success" onclick="proceedToExport()">
+            Done with Review - Proceed to Export
+        </button>
+        <button class="btn btn-secondary" onclick="window.location.href='/matching'">
+            Back to Matches
+        </button>
+    </div>
+</div>
+
+<style>
+    .review-item {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 25px;
+        background: #ffffff;
+    }
+
+    .review-item.completed {
+        opacity: 0.6;
+        border-color: #28a745;
+        background: #f8f9fa;
+    }
+
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .review-title {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .review-status {
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        font-weight: 600;
+    }
+
+    .status-pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .status-completed {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .revenue-card {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border-left: 5px solid #28a745;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+
+    .revenue-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .revenue-desc {
+        font-weight: 600;
+        font-size: 1.1em;
+        color: #155724;
+    }
+
+    .revenue-amount {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #28a745;
+    }
+
+    .matching-section {
+        margin-top: 20px;
+    }
+
+    .section-title {
+        font-weight: 600;
+        font-size: 1.1em;
+        margin-bottom: 15px;
+        color: #333;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .expense-option {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .expense-option:hover {
+        border-color: #667eea;
+        box-shadow: 0 3px 10px rgba(102, 126, 234, 0.2);
+    }
+
+    .expense-option.selected {
+        border-color: #667eea;
+        background: #f0f2ff;
+    }
+
+    .expense-option input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        margin-right: 15px;
+    }
+
+    .expense-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .expense-left {
+        display: flex;
+        align-items: center;
+        flex: 1;
+    }
+
+    .expense-desc {
+        flex: 1;
+        font-weight: 500;
+    }
+
+    .expense-amount {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #dc3545;
+        margin: 0 20px;
+    }
+
+    .match-scores {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .score-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+
+    .score-high {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .score-medium {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .score-low {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .selection-summary {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        display: none;
+    }
+
+    .selection-summary.show {
+        display: block;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+    }
+
+    .summary-row.total {
+        border-top: 2px solid #dee2e6;
+        font-weight: bold;
+        font-size: 1.1em;
+        margin-top: 10px;
+        padding-top: 15px;
+    }
+
+    .balance-indicator {
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        margin-top: 10px;
+    }
+
+    .balance-good {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .balance-bad {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .no-matches-message {
+        text-align: center;
+        padding: 30px;
+        background: #fff3cd;
+        border-radius: 8px;
+        color: #856404;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .keyword-tags {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+    }
+
+    .keyword-tag {
+        background: #e7f3ff;
+        color: #0066cc;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+    }
+</style>
+
+<script>
+    let reviewItems = [];
+    let currentReviewIndex = 0;
+    let completedCount = 0;
+
+    // Load review items on page load
+    window.addEventListener('DOMContentLoaded', async () => {
+        await loadReviewItems();
+    });
+
+    async function loadReviewItems() {
+        try {
+            const response = await fetch('/get_review_items');
+            const data = await response.json();
+
+            if (data.success) {
+                reviewItems = data.review_items || [];
+                hideLoading('loadingSection');
+                document.getElementById('reviewSection').style.display = 'block';
+
+                if (reviewItems.length === 0) {
+                    showNoReviewItems();
+                } else {
+                    displayReviewItems();
+                    updateProgress();
+                }
+            } else {
+                showAlert('Error loading review items: ' + data.message, 'error');
+            }
+        } catch (error) {
+            showAlert('Error loading review items: ' + error.message, 'error');
+        }
+    }
+
+    function showNoReviewItems() {
+        document.getElementById('noReviewItems').style.display = 'block';
+        document.getElementById('actionButtons').style.display = 'none';
+    }
+
+    function displayReviewItems() {
+        const container = document.getElementById('reviewItemsContainer');
+        container.innerHTML = '';
+
+        reviewItems.forEach((item, index) => {
+            const reviewCard = createReviewCard(item, index);
+            container.appendChild(reviewCard);
+        });
+    }
+
+    function createReviewCard(item, index) {
+        const div = document.createElement('div');
+        div.className = 'review-item';
+        div.id = `review-item-${index}`;
+
+        const revenue = item.revenue || {};
+        const potentialMatches = item.potential_expenses || [];
+        const status = item.status || 'pending_review';
+
+        div.innerHTML = `
+            <div class="review-header">
+                <div class="review-title">Review Item #${index + 1}</div>
+                <div class="review-status ${status === 'pending_review' ? 'status-pending' : 'status-completed'}">
+                    ${status === 'pending_review' ? '⏳ Pending' : '✓ Completed'}
+                </div>
+            </div>
+
+            <div class="revenue-card">
+                <div style="margin-bottom: 10px; font-weight: 600; color: #155724;">
+                    Target Revenue to Match:
+                </div>
+                <div class="revenue-info">
+                    <div class="revenue-desc">${revenue.description || 'N/A'}</div>
+                    <div class="revenue-amount">+${formatCurrency(Math.abs(revenue.amount || 0))}</div>
+                </div>
+            </div>
+
+            <div class="matching-section">
+                <div class="section-title">
+                    <span>💡 Suggested Expense Matches</span>
+                    <span style="font-size: 0.85em; font-weight: normal; color: #6c757d;">
+                        (Select one or more expenses that total the revenue amount)
+                    </span>
+                </div>
+
+                <div id="expenses-${index}">
+                    ${potentialMatches.length > 0
+                        ? potentialMatches.map((match, mIndex) => createExpenseOption(match, index, mIndex)).join('')
+                        : '<div class="no-matches-message">No potential matches found. This transaction may need to be reviewed separately.</div>'
+                    }
+                </div>
+
+                ${potentialMatches.length > 0 ? `
+                    <div class="selection-summary" id="summary-${index}">
+                        <div style="font-weight: 600; margin-bottom: 10px;">Selection Summary:</div>
+                        <div id="selected-list-${index}"></div>
+                        <div class="summary-row total">
+                            <span>Selected Total:</span>
+                            <span id="selected-total-${index}">$0.00</span>
+                        </div>
+                        <div class="summary-row total" style="border-top: none; padding-top: 5px;">
+                            <span>Balance:</span>
+                            <span id="balance-${index}">$0.00</span>
+                        </div>
+                        <div class="balance-indicator" id="balance-indicator-${index}"></div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-success" onclick="confirmMatch(${index})" id="confirm-btn-${index}" disabled>
+                            ✓ Confirm Match
+                        </button>
+                        <button class="btn btn-secondary" onclick="skipItem(${index})">
+                            Skip for Now
+                        </button>
+                    </div>
+                ` : `
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" onclick="skipItem(${index})">
+                            Skip This Item
+                        </button>
+                    </div>
+                `}
+            </div>
+        `;
+
+        return div;
+    }
+
+    function createExpenseOption(match, reviewIndex, matchIndex) {
+        const expense = match.expense || {};
+        const combinedScore = (match.combined_score || 0) * 100;
+        const fuzzyScore = (match.fuzzy_score || 0) * 100;
+        const keywordScore = (match.keyword_score || 0) * 100;
+        const sharedKeywords = match.shared_keywords || [];
+
+        let scoreClass = 'score-low';
+        if (combinedScore >= 70) scoreClass = 'score-high';
+        else if (combinedScore >= 50) scoreClass = 'score-medium';
+
+        return `
+            <div class="expense-option" id="expense-${reviewIndex}-${matchIndex}">
+                <div class="expense-content">
+                    <div class="expense-left">
+                        <input type="checkbox"
+                               id="checkbox-${reviewIndex}-${matchIndex}"
+                               data-review="${reviewIndex}"
+                               data-match="${matchIndex}"
+                               data-amount="${Math.abs(expense.amount || 0)}"
+                               data-index="${expense.original_index}"
+                               onchange="handleExpenseSelection(${reviewIndex})">
+                        <div style="flex: 1;">
+                            <div class="expense-desc">${expense.description || 'N/A'}</div>
+                            ${sharedKeywords.length > 0 ? `
+                                <div class="keyword-tags">
+                                    <span style="font-size: 0.85em; color: #6c757d;">Matched keywords:</span>
+                                    ${sharedKeywords.map(kw => `<span class="keyword-tag">${kw}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="expense-amount">-${formatCurrency(Math.abs(expense.amount || 0))}</div>
+                    <div class="match-scores">
+                        <span class="score-badge ${scoreClass}">${combinedScore.toFixed(0)}% Match</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function handleExpenseSelection(reviewIndex) {
+        const revenue = reviewItems[reviewIndex].revenue;
+        const revenueAmount = Math.abs(revenue.amount || 0);
+
+        // Get all selected checkboxes for this review item
+        const checkboxes = document.querySelectorAll(`input[data-review="${reviewIndex}"]:checked`);
+
+        // Calculate total
+        let selectedTotal = 0;
+        const selectedExpenses = [];
+
+        checkboxes.forEach(cb => {
+            const amount = parseFloat(cb.dataset.amount);
+            selectedTotal += amount;
+            selectedExpenses.push({
+                index: cb.dataset.index,
+                amount: amount
+            });
+
+            // Highlight selected
+            const optionDiv = cb.closest('.expense-option');
+            if (cb.checked) {
+                optionDiv.classList.add('selected');
+            } else {
+                optionDiv.classList.remove('selected');
+            }
+        });
+
+        // Show/hide summary
+        const summary = document.getElementById(`summary-${reviewIndex}`);
+        if (selectedExpenses.length > 0) {
+            summary.classList.add('show');
+        } else {
+            summary.classList.remove('show');
+        }
+
+        // Update summary
+        const selectedList = document.getElementById(`selected-list-${reviewIndex}`);
+        selectedList.innerHTML = selectedExpenses.map((exp, idx) => `
+            <div class="summary-row">
+                <span>Expense ${idx + 1}:</span>
+                <span>${formatCurrency(exp.amount)}</span>
+            </div>
+        `).join('');
+
+        document.getElementById(`selected-total-${reviewIndex}`).textContent = formatCurrency(selectedTotal);
+
+        // Calculate balance
+        const balance = revenueAmount - selectedTotal;
+        document.getElementById(`balance-${reviewIndex}`).textContent = formatCurrency(Math.abs(balance));
+
+        // Update balance indicator
+        const balanceIndicator = document.getElementById(`balance-indicator-${reviewIndex}`);
+        const confirmBtn = document.getElementById(`confirm-btn-${reviewIndex}`);
+
+        if (Math.abs(balance) < 0.01 && selectedExpenses.length > 0) {
+            balanceIndicator.className = 'balance-indicator balance-good';
+            balanceIndicator.textContent = '✓ Perfect Balance! You can confirm this match.';
+            confirmBtn.disabled = false;
+        } else if (selectedExpenses.length > 0) {
+            balanceIndicator.className = 'balance-indicator balance-bad';
+            if (balance > 0) {
+                balanceIndicator.textContent = `⚠ Need ${formatCurrency(balance)} more in expenses`;
+            } else {
+                balanceIndicator.textContent = `⚠ Selected ${formatCurrency(Math.abs(balance))} too much`;
+            }
+            confirmBtn.disabled = true;
+        } else {
+            balanceIndicator.textContent = '';
+            confirmBtn.disabled = true;
+        }
+    }
+
+    async function confirmMatch(reviewIndex) {
+        const revenue = reviewItems[reviewIndex].revenue;
+        const checkboxes = document.querySelectorAll(`input[data-review="${reviewIndex}"]:checked`);
+
+        const expenseIndices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
+
+        if (expenseIndices.length === 0) {
+            showAlert('Please select at least one expense', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('/confirm_match', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    revenue_index: revenue.original_index,
+                    expense_indices: expenseIndices
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert('Match confirmed successfully!', 'success');
+
+                // Mark as completed
+                const reviewCard = document.getElementById(`review-item-${reviewIndex}`);
+                reviewCard.classList.add('completed');
+                reviewCard.querySelector('.review-status').className = 'review-status status-completed';
+                reviewCard.querySelector('.review-status').textContent = '✓ Completed';
+
+                completedCount++;
+                updateProgress();
+
+                // Reload review items if there are still items
+                if (data.remaining_reviews > 0) {
+                    await loadReviewItems();
+                } else {
+                    showNoReviewItems();
+                }
+            } else {
+                showAlert(data.message, 'error');
+            }
+        } catch (error) {
+            showAlert('Error confirming match: ' + error.message, 'error');
+        }
+    }
+
+    function skipItem(reviewIndex) {
+        const reviewCard = document.getElementById(`review-item-${reviewIndex}`);
+        reviewCard.style.opacity = '0.5';
+        showAlert('Item skipped. You can come back to it later.', 'info');
+    }
+
+    function updateProgress() {
+        const total = reviewItems.length;
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+
+        const percentage = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+
+        progressBar.style.width = percentage + '%';
+        progressText.textContent = `${completedCount} of ${total}`;
+    }
+
+    function proceedToExport() {
+        window.location.href = '/export_options';
+    }
+</script>
+{% endblock %}

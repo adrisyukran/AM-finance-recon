@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}Upload File - Finance Reconciliation{% endblock %}
+
+{% block navigation %}
+<div class="nav-steps">
+    <div class="step active">
+        <div class="step-number">1</div>
+        <span>Upload File</span>
+    </div>
+    <div class="step" id="step-columns">
+        <div class="step-number">2</div>
+        <span>Select Columns</span>
+    </div>
+    <div class="step">
+        <div class="step-number">3</div>
+        <span>Auto Match</span>
+    </div>
+    <div class="step">
+        <div class="step-number">4</div>
+        <span>Review</span>
+    </div>
+    <div class="step">
+        <div class="step-number">5</div>
+        <span>Export</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="upload-section">
+    <div class="card">
+        <div class="card-header">
+            📁 Upload Your Finance File
+        </div>
+        <p style="color: #6c757d; margin-bottom: 20px;">
+            Upload a CSV or Excel file containing your expense and revenue transactions.
+            The file should have columns for transaction amounts and descriptions.
+        </p>
+
+        <div class="form-group">
+            <label class="form-label">Select File:</label>
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" class="form-control"
+                   style="padding: 10px; cursor: pointer;">
+        </div>
+
+        <div class="alert alert-info">
+            <strong>📋 Supported Formats:</strong> CSV (.csv), Excel (.xlsx, .xls)<br>
+            <strong>💡 Tip:</strong> Make sure your file has a column with transaction amounts (positive for revenue, negative for expenses) and a description column.
+        </div>
+
+        <button id="uploadBtn" class="btn btn-primary" onclick="uploadFile()" disabled>
+            Upload & Analyze File
+        </button>
+
+        <div id="uploadLoading" class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px;">Uploading and analyzing file...</p>
+        </div>
+    </div>
+</div>
+
+<div id="column-selection-section" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            🔧 Select Columns for Matching
+        </div>
+        <p style="color: #6c757d; margin-bottom: 20px;">
+            Select the columns that will be used for entity matching and balance calculation.
+        </p>
+
+        <div id="fileInfo" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <strong>File:</strong> <span id="fileName"></span><br>
+            <strong>Total Columns:</strong> <span id="columnCount"></span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Amount Column:</label>
+            <select id="amountColumn" class="form-control">
+                <option value="">-- Select Amount Column --</option>
+            </select>
+            <small style="color: #6c757d; display: block; margin-top: 5px;">
+                Column containing transaction amounts (negative for expenses, positive for revenue)
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Description Column:</label>
+            <select id="descriptionColumn" class="form-control">
+                <option value="">-- Select Description Column --</option>
+            </select>
+            <small style="color: #6c757d; display: block; margin-top: 5px;">
+                Column containing transaction descriptions for entity matching
+            </small>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button class="btn btn-primary" onclick="startMatching()">
+                Start Matching Process
+            </button>
+            <button class="btn btn-secondary" onclick="location.reload()">
+                Upload Different File
+            </button>
+        </div>
+
+        <div id="columnLoading" class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px;">Processing transactions...</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    #fileInput {
+        border: 2px dashed #667eea;
+        background: #f8f9ff;
+        cursor: pointer;
+    }
+
+    #fileInput:hover {
+        background: #f0f2ff;
+        border-color: #5568d3;
+    }
+
+    .form-group small {
+        font-size: 0.9em;
+    }
+</style>
+
+<script>
+    // Enable upload button when file is selected
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const uploadBtn = document.getElementById('uploadBtn');
+        uploadBtn.disabled = !e.target.files.length;
+    });
+
+    async function uploadFile() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            showAlert('Please select a file', 'error');
+            return;
+        }
+
+        // Show loading
+        showLoading('uploadLoading');
+        document.getElementById('uploadBtn').disabled = true;
+
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Hide upload section
+                document.getElementById('upload-section').style.display = 'none';
+
+                // Show column selection
+                document.getElementById('column-selection-section').style.display = 'block';
+
+                // Update step indicator
+                document.getElementById('step-columns').classList.add('active');
+
+                // Populate column dropdowns
+                populateColumns(data.columns, data.suggested_amount, data.suggested_description);
+
+                // Update file info
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('columnCount').textContent = data.columns.length;
+
+                showAlert(data.message, 'success');
+            } else {
+                showAlert(data.message, 'error');
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        } catch (error) {
+            showAlert('Error uploading file: ' + error.message, 'error');
+            document.getElementById('uploadBtn').disabled = false;
+        } finally {
+            hideLoading('uploadLoading');
+        }
+    }
+
+    function populateColumns(columns, suggestedAmount, suggestedDescription) {
+        const amountSelect = document.getElementById('amountColumn');
+        const descriptionSelect = document.getElementById('descriptionColumn');
+
+        // Clear existing options except the first one
+        amountSelect.innerHTML = '<option value="">-- Select Amount Column --</option>';
+        descriptionSelect.innerHTML = '<option value="">-- Select Description Column --</option>';
+
+        // Add column options
+        columns.forEach(col => {
+            // Amount column option
+            const amountOption = document.createElement('option');
+            amountOption.value = col;
+            amountOption.textContent = col;
+            if (col === suggestedAmount) {
+                amountOption.selected = true;
+                amountOption.textContent += ' (Suggested)';
+            }
+            amountSelect.appendChild(amountOption);
+
+            // Description column option
+            const descOption = document.createElement('option');
+            descOption.value = col;
+            descOption.textContent = col;
+            if (col === suggestedDescription) {
+                descOption.selected = true;
+                descOption.textContent += ' (Suggested)';
+            }
+            descriptionSelect.appendChild(descOption);
+        });
+    }
+
+    async function startMatching() {
+        const amountColumn = document.getElementById('amountColumn').value;
+        const descriptionColumn = document.getElementById('descriptionColumn').value;
+
+        if (!amountColumn || !descriptionColumn) {
+            showAlert('Please select both Amount and Description columns', 'error');
+            return;
+        }
+
+        if (amountColumn === descriptionColumn) {
+            showAlert('Amount and Description columns must be different', 'error');
+            return;
+        }
+
+        // Show loading
+        showLoading('columnLoading');
+
+        try {
+            // Send column selection
+            const selectResponse = await fetch('/select_columns', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    amount_column: amountColumn,
+                    description_column: descriptionColumn
+                })
+            });
+
+            const selectData = await selectResponse.json();
+
+            if (!selectData.success) {
+                showAlert(selectData.message, 'error');
+                hideLoading('columnLoading');
+                return;
+            }
+
+            // Start auto matching
+            const matchResponse = await fetch('/auto_match', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const matchData = await matchResponse.json();
+
+            if (matchData.success) {
+                // Store match results and redirect
+                sessionStorage.setItem('matchResults', JSON.stringify(matchData));
+                window.location.href = '/matching';
+            } else {
+                showAlert(matchData.message, 'error');
+            }
+        } catch (error) {
+            showAlert('Error processing: ' + error.message, 'error');
+        } finally {
+            hideLoading('columnLoading');
+        }
+    }
+
+    // Handle drag and drop for file input
+    const fileInput = document.getElementById('fileInput');
+    const uploadSection = document.getElementById('upload-section');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadSection.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadSection.addEventListener(eventName, () => {
+            uploadSection.style.opacity = '0.7';
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadSection.addEventListener(eventName, () => {
+            uploadSection.style.opacity = '1';
+        });
+    });
+
+    uploadSection.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+
+        if (files.length > 0) {
+            fileInput.files = files;
+            document.getElementById('uploadBtn').disabled = false;
+        }
+    });
+</script>
+{% endblock %}

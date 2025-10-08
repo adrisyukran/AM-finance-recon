@@ -1,0 +1,505 @@
+{% extends "base.html" %}
+
+{% block title %}Export Results - Finance Reconciliation{% endblock %}
+
+{% block navigation %}
+<div class="nav-steps">
+    <div class="step completed">
+        <div class="step-number">1</div>
+        <span>Upload File</span>
+    </div>
+    <div class="step completed">
+        <div class="step-number">2</div>
+        <span>Select Columns</span>
+    </div>
+    <div class="step completed">
+        <div class="step-number">3</div>
+        <span>Auto Match</span>
+    </div>
+    <div class="step completed">
+        <div class="step-number">4</div>
+        <span>Review</span>
+    </div>
+    <div class="step active">
+        <div class="step-number">5</div>
+        <span>Export</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        📊 Reconciliation Summary
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+            <div class="stat-value">{{ summary.matched_count }}</div>
+            <div class="stat-label">Matched Transactions</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+            <div class="stat-value">{{ summary.unmatched_count }}</div>
+            <div class="stat-label">Unmatched</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+            <div class="stat-value">{{ summary.total_transactions }}</div>
+            <div class="stat-label">Total Transactions</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);">
+            <div class="stat-value">{{ "%.1f"|format((summary.matched_count / summary.total_transactions * 100) if summary.total_transactions > 0 else 0) }}%</div>
+            <div class="stat-label">Match Rate</div>
+        </div>
+    </div>
+
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-top: 20px;">
+        <h4 style="margin-bottom: 15px;">Financial Summary</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <strong>Total Revenue:</strong> ${{ "%.2f"|format(summary.total_revenue_amount) }}
+            </div>
+            <div>
+                <strong>Total Expenses:</strong> ${{ "%.2f"|format(summary.total_expense_amount) }}
+            </div>
+            <div>
+                <strong>Net Balance:</strong>
+                <span style="color: {{ 'green' if summary.net_balance >= 0 else 'red' }}; font-weight: bold;">
+                    ${{ "%.2f"|format(summary.net_balance) }}
+                </span>
+            </div>
+            <div>
+                <strong>Reconciliation Status:</strong>
+                <span style="color: {{ 'green' if summary.unmatched_count == 0 else 'orange' }}; font-weight: bold;">
+                    {{ "Complete" if summary.unmatched_count == 0 else "Partial" }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        💾 Export Options
+    </div>
+    <p style="color: #6c757d; margin-bottom: 25px;">
+        Choose how you want to export your reconciliation results.
+    </p>
+
+    <div class="export-options">
+        <div class="export-option" id="option-new" onclick="selectExportOption('new')">
+            <div class="option-icon">📄</div>
+            <div class="option-content">
+                <div class="option-title">Create New Grouped File</div>
+                <div class="option-desc">
+                    Export a new file with all matched transactions grouped together by match groups.
+                    Includes match confidence, type, and reconciliation status.
+                </div>
+            </div>
+            <div class="option-check" id="check-new">✓</div>
+        </div>
+
+        <div class="export-option" id="option-update" onclick="selectExportOption('update')">
+            <div class="option-icon">✏️</div>
+            <div class="option-content">
+                <div class="option-title">Update Original File</div>
+                <div class="option-desc">
+                    Create a copy of your original file with added reconciliation status columns
+                    and optional highlighting of matched rows.
+                </div>
+            </div>
+            <div class="option-check" id="check-update">✓</div>
+        </div>
+
+        <div class="export-option" id="option-report" onclick="selectExportOption('report')">
+            <div class="option-icon">📑</div>
+            <div class="option-content">
+                <div class="option-title">Generate Detailed Report</div>
+                <div class="option-desc">
+                    Export a comprehensive Excel report with multiple sheets including summary,
+                    matched transactions, unmatched items, and match details.
+                </div>
+            </div>
+            <div class="option-check" id="check-report">✓</div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration for New File -->
+<div class="card config-section" id="config-new" style="display: none;">
+    <div class="card-header">
+        ⚙️ New File Configuration
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">File Format:</label>
+        <select id="newFileFormat" class="form-control">
+            <option value="xlsx" selected>Excel (.xlsx)</option>
+            <option value="csv">CSV (.csv)</option>
+        </select>
+        <small style="color: #6c757d;">Excel format recommended for better formatting</small>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Note:</strong> The new file will include all original columns plus:
+        <ul style="margin: 10px 0 0 20px;">
+            <li>Match Group ID</li>
+            <li>Match Status</li>
+            <li>Match Confidence</li>
+            <li>Match Type</li>
+            <li>Group Position</li>
+        </ul>
+    </div>
+
+    <button class="btn btn-primary" onclick="exportNewFile()">
+        📥 Export New Grouped File
+    </button>
+</div>
+
+<!-- Configuration for Update File -->
+<div class="card config-section" id="config-update" style="display: none;">
+    <div class="card-header">
+        ⚙️ Update File Configuration
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Status Column Name(s):</label>
+        <input type="text" id="statusColumns" class="form-control"
+               value="Reconciliation Status"
+               placeholder="Enter column name (or comma-separated names)">
+        <small style="color: #6c757d;">The column(s) where reconciliation status will be added</small>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Status Text for Matched Items:</label>
+        <input type="text" id="statusText" class="form-control"
+               value="RECONCILED"
+               placeholder="Enter status text">
+        <small style="color: #6c757d;">Text that will be added to matched rows</small>
+    </div>
+
+    <div class="form-group">
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="highlightRows" checked
+                   style="width: 20px; height: 20px; cursor: pointer;">
+            <span class="form-label" style="margin: 0;">Highlight matched rows (yellow)</span>
+        </label>
+        <small style="color: #6c757d; display: block; margin-left: 30px;">
+            Apply yellow highlighting to all matched transactions
+        </small>
+    </div>
+
+    <button class="btn btn-primary" onclick="exportUpdateFile()">
+        📥 Export Updated File
+    </button>
+</div>
+
+<!-- Configuration for Report -->
+<div class="card config-section" id="config-report" style="display: none;">
+    <div class="card-header">
+        ⚙️ Report Configuration
+    </div>
+
+    <div class="alert alert-info">
+        <strong>The report will include:</strong>
+        <ul style="margin: 10px 0 0 20px;">
+            <li><strong>Summary Sheet:</strong> Overall reconciliation statistics</li>
+            <li><strong>Matched Sheet:</strong> All successfully matched transactions</li>
+            <li><strong>Unmatched Sheet:</strong> Transactions that need attention</li>
+            <li><strong>Match Details Sheet:</strong> Detailed information about each match group</li>
+        </ul>
+    </div>
+
+    <button class="btn btn-primary" onclick="exportReport()">
+        📥 Generate Detailed Report
+    </button>
+</div>
+
+<div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+    <div class="card-header" style="color: white; border-bottom-color: rgba(255,255,255,0.3);">
+        🎉 Reconciliation Complete!
+    </div>
+    <p style="font-size: 1.1em;">
+        Your finance reconciliation has been completed. Export your results using the options above,
+        and review any unmatched transactions for manual processing.
+    </p>
+    <div style="margin-top: 20px;">
+        <button class="btn" style="background: white; color: #667eea;" onclick="window.location.href='/reset'">
+            Start New Reconciliation
+        </button>
+    </div>
+</div>
+
+<!-- Export Loading Modal -->
+<div id="exportModal" class="modal">
+    <div class="modal-content">
+        <div class="spinner"></div>
+        <h3 id="exportModalTitle">Exporting...</h3>
+        <p id="exportModalMessage">Please wait while we prepare your file.</p>
+    </div>
+</div>
+
+<style>
+    .export-options {
+        display: grid;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .export-option {
+        border: 3px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        background: white;
+        position: relative;
+    }
+
+    .export-option:hover {
+        border-color: #667eea;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        transform: translateY(-2px);
+    }
+
+    .export-option.selected {
+        border-color: #667eea;
+        background: #f0f2ff;
+    }
+
+    .option-icon {
+        font-size: 3em;
+        flex-shrink: 0;
+    }
+
+    .option-content {
+        flex: 1;
+    }
+
+    .option-title {
+        font-size: 1.2em;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #333;
+    }
+
+    .option-desc {
+        color: #6c757d;
+        line-height: 1.5;
+    }
+
+    .option-check {
+        font-size: 2em;
+        color: #667eea;
+        display: none;
+    }
+
+    .export-option.selected .option-check {
+        display: block;
+    }
+
+    .config-section {
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 40px;
+        border-radius: 15px;
+        text-align: center;
+        min-width: 300px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-content h3 {
+        margin: 20px 0 10px 0;
+        color: #333;
+    }
+
+    .modal-content p {
+        color: #6c757d;
+    }
+</style>
+
+<script>
+    let selectedExportType = null;
+
+    function selectExportOption(type) {
+        selectedExportType = type;
+
+        // Update selection UI
+        document.querySelectorAll('.export-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+        document.getElementById(`option-${type}`).classList.add('selected');
+
+        // Hide all config sections
+        document.querySelectorAll('.config-section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        // Show selected config
+        document.getElementById(`config-${type}`).style.display = 'block';
+
+        // Scroll to config
+        document.getElementById(`config-${type}`).scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest'
+        });
+    }
+
+    function showExportModal(title, message) {
+        document.getElementById('exportModalTitle').textContent = title;
+        document.getElementById('exportModalMessage').textContent = message;
+        document.getElementById('exportModal').classList.add('active');
+    }
+
+    function hideExportModal() {
+        document.getElementById('exportModal').classList.remove('active');
+    }
+
+    async function exportNewFile() {
+        const format = document.getElementById('newFileFormat').value;
+
+        showExportModal('Creating New File...', 'Grouping and formatting your matched transactions.');
+
+        try {
+            const response = await fetch('/export', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    export_type: 'new',
+                    file_format: format
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                hideExportModal();
+                showAlert('File created successfully!', 'success');
+
+                // Trigger download
+                window.location.href = data.download_url;
+            } else {
+                hideExportModal();
+                showAlert('Error: ' + data.message, 'error');
+            }
+        } catch (error) {
+            hideExportModal();
+            showAlert('Error exporting file: ' + error.message, 'error');
+        }
+    }
+
+    async function exportUpdateFile() {
+        const statusColumnsInput = document.getElementById('statusColumns').value;
+        const statusColumns = statusColumnsInput.split(',').map(col => col.trim()).filter(col => col);
+        const statusText = document.getElementById('statusText').value || 'RECONCILED';
+        const highlight = document.getElementById('highlightRows').checked;
+
+        if (statusColumns.length === 0) {
+            showAlert('Please enter at least one status column name', 'error');
+            return;
+        }
+
+        showExportModal('Updating File...', 'Adding reconciliation status to your original file.');
+
+        try {
+            const response = await fetch('/export', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    export_type: 'update',
+                    status_columns: statusColumns,
+                    status_text: statusText,
+                    highlight: highlight
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                hideExportModal();
+                showAlert('File updated successfully!', 'success');
+
+                // Trigger download
+                window.location.href = data.download_url;
+            } else {
+                hideExportModal();
+                showAlert('Error: ' + data.message, 'error');
+            }
+        } catch (error) {
+            hideExportModal();
+            showAlert('Error updating file: ' + error.message, 'error');
+        }
+    }
+
+    async function exportReport() {
+        showExportModal('Generating Report...', 'Creating comprehensive reconciliation report with multiple sheets.');
+
+        try {
+            const response = await fetch('/export_report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                hideExportModal();
+                showAlert('Report generated successfully!', 'success');
+
+                // Trigger download
+                window.location.href = data.download_url;
+            } else {
+                hideExportModal();
+                showAlert('Error: ' + data.message, 'error');
+            }
+        } catch (error) {
+            hideExportModal();
+            showAlert('Error generating report: ' + error.message, 'error');
+        }
+    }
+
+    // Auto-select first option on load
+    window.addEventListener('DOMContentLoaded', () => {
+        selectExportOption('new');
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}Matching Results - Finance Reconciliation{% endblock %}
+
+{% block navigation %}
+<div class="nav-steps">
+    <div class="step completed">
+        <div class="step-number">1</div>
+        <span>Upload File</span>
+    </div>
+    <div class="step completed">
+        <div class="step-number">2</div>
+        <span>Select Columns</span>
+    </div>
+    <div class="step active">
+        <div class="step-number">3</div>
+        <span>Auto Match</span>
+    </div>
+    <div class="step">
+        <div class="step-number">4</div>
+        <span>Review</span>
+    </div>
+    <div class="step">
+        <div class="step-number">5</div>
+        <span>Export</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="loadingSection" class="loading active">
+    <div class="spinner"></div>
+    <p style="margin-top: 15px;">Loading matching results...</p>
+</div>
+
+<div id="resultsSection" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            ✅ Auto-Matching Complete
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <div class="stat-value" id="matchedCount">0</div>
+                <div class="stat-label">Matched Groups</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                <div class="stat-value" id="reviewCount">0</div>
+                <div class="stat-label">Need Review</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+                <div class="stat-value" id="matchRate">0%</div>
+                <div class="stat-label">Match Rate</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #6610f2 0%, #e83e8c 100%);">
+                <div class="stat-value" id="balanceStatus">$0</div>
+                <div class="stat-label">Net Balance</div>
+            </div>
+        </div>
+
+        <div class="progress-bar" style="margin-top: 30px;">
+            <div class="progress-fill" id="progressBar" style="width: 0%;">
+                <span id="progressText">0%</span>
+            </div>
+        </div>
+        <p style="text-align: center; color: #6c757d; margin-top: 10px;">
+            Reconciliation Progress
+        </p>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            📊 Matched Transaction Groups
+        </div>
+        <p style="color: #6c757d; margin-bottom: 20px;">
+            The following transactions have been automatically matched with high confidence.
+        </p>
+
+        <div id="matchedList"></div>
+
+        <div id="noMatches" style="text-align: center; padding: 40px; color: #6c757d; display: none;">
+            <p style="font-size: 1.2em;">No automatic matches found.</p>
+            <p>All transactions will need manual review.</p>
+        </div>
+    </div>
+
+    <div class="card" id="unmatchedCard" style="display: none;">
+        <div class="card-header">
+            ⚠️ Unmatched Transactions
+        </div>
+        <div class="alert alert-warning">
+            <strong>Action Required:</strong> Some transactions could not be automatically matched.
+            Please proceed to the review page to match them manually with AI assistance.
+        </div>
+        <div id="unmatchedSummary" style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
+        <button class="btn btn-primary" onclick="proceedToReview()" id="reviewBtn">
+            Review Unmatched Items <span id="reviewBadge" class="badge"></span>
+        </button>
+        <button class="btn btn-success" onclick="proceedToExport()" id="exportBtn" style="display: none;">
+            Skip to Export (All Matched)
+        </button>
+        <button class="btn btn-secondary" onclick="window.location.href='/'">
+            Start Over
+        </button>
+    </div>
+</div>
+
+<style>
+    .match-group {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        background: #ffffff;
+        transition: all 0.3s ease;
+    }
+
+    .match-group:hover {
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        border-color: #667eea;
+    }
+
+    .match-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .match-id {
+        font-weight: bold;
+        color: #667eea;
+        font-size: 1.1em;
+    }
+
+    .match-badge {
+        background: #28a745;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+
+    .match-badge.exact {
+        background: #28a745;
+    }
+
+    .match-badge.fuzzy {
+        background: #17a2b8;
+    }
+
+    .match-badge.keyword {
+        background: #ffc107;
+        color: #333;
+    }
+
+    .match-badge.manual {
+        background: #6610f2;
+    }
+
+    .transaction-item {
+        padding: 12px;
+        margin: 8px 0;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .transaction-item.revenue {
+        background: #d4edda;
+        border-left: 4px solid #28a745;
+    }
+
+    .transaction-item.expense {
+        background: #f8d7da;
+        border-left: 4px solid #dc3545;
+    }
+
+    .transaction-desc {
+        flex: 1;
+        font-weight: 500;
+    }
+
+    .transaction-amount {
+        font-weight: bold;
+        font-size: 1.1em;
+        margin-left: 15px;
+    }
+
+    .transaction-amount.positive {
+        color: #28a745;
+    }
+
+    .transaction-amount.negative {
+        color: #dc3545;
+    }
+
+    .confidence-indicator {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 5px;
+        font-size: 0.85em;
+        margin-left: 10px;
+    }
+
+    .confidence-high {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .confidence-medium {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .confidence-low {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .badge {
+        background: #dc3545;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        margin-left: 5px;
+    }
+
+    .balance-summary {
+        text-align: center;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-top: 15px;
+        font-weight: 600;
+    }
+
+    .balance-zero {
+        color: #28a745;
+    }
+
+    .balance-nonzero {
+        color: #dc3545;
+    }
+</style>
+
+<script>
+    let matchResults = null;
+
+    // Load results on page load
+    window.addEventListener('DOMContentLoaded', async () => {
+        // Try to get from session storage first
+        const stored = sessionStorage.getItem('matchResults');
+        if (stored) {
+            matchResults = JSON.parse(stored);
+            displayResults();
+        } else {
+            // Fetch from server
+            await loadMatchResults();
+        }
+    });
+
+    async function loadMatchResults() {
+        try {
+            const response = await fetch('/get_summary');
+            const data = await response.json();
+
+            if (data.success) {
+                matchResults = data;
+                displayResults();
+            } else {
+                showAlert('Error loading results: ' + data.message, 'error');
+            }
+        } catch (error) {
+            showAlert('Error loading results: ' + error.message, 'error');
+        }
+    }
+
+    function displayResults() {
+        hideLoading('loadingSection');
+        document.getElementById('resultsSection').style.display = 'block';
+
+        const { matched_count, review_count, summary, balance_stats } = matchResults;
+
+        // Update statistics
+        document.getElementById('matchedCount').textContent = matched_count || 0;
+        document.getElementById('reviewCount').textContent = review_count || 0;
+
+        const totalTransactions = summary.total_transactions || 0;
+        const matchedTransactions = summary.matched_count || 0;
+        const matchRate = totalTransactions > 0
+            ? Math.round((matchedTransactions / totalTransactions) * 100)
+            : 0;
+
+        document.getElementById('matchRate').textContent = matchRate + '%';
+        document.getElementById('balanceStatus').textContent = formatCurrency(summary.net_balance || 0);
+
+        // Update progress bar
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        progressBar.style.width = matchRate + '%';
+        progressText.textContent = matchRate + '%';
+
+        // Show review button with badge
+        const reviewBtn = document.getElementById('reviewBtn');
+        const reviewBadge = document.getElementById('reviewBadge');
+        if (review_count > 0) {
+            reviewBadge.textContent = review_count;
+            reviewBadge.style.display = 'inline';
+            document.getElementById('unmatchedCard').style.display = 'block';
+
+            // Update unmatched summary
+            const unmatchedSummary = document.getElementById('unmatchedSummary');
+            unmatchedSummary.innerHTML = `
+                <strong>Unmatched Expenses:</strong> ${summary.expense_count - (summary.matched_count - review_count)}<br>
+                <strong>Unmatched Revenues:</strong> ${summary.revenue_count - matched_count}<br>
+                <strong>Total Amount Unmatched:</strong> ${formatCurrency(summary.total_expense_amount + summary.total_revenue_amount - (balance_stats?.total_revenue || 0))}
+            `;
+        } else {
+            reviewBtn.style.display = 'none';
+            document.getElementById('exportBtn').style.display = 'inline-block';
+        }
+
+        // Load and display matches
+        loadMatches();
+    }
+
+    async function loadMatches() {
+        try {
+            const response = await fetch('/get_matches');
+            const data = await response.json();
+
+            if (data.success) {
+                displayMatches(data.matches);
+            } else {
+                showAlert('Error loading matches: ' + data.message, 'error');
+            }
+        } catch (error) {
+            showAlert('Error loading matches: ' + error.message, 'error');
+        }
+    }
+
+    function displayMatches(matches) {
+        const matchedList = document.getElementById('matchedList');
+        const noMatches = document.getElementById('noMatches');
+
+        if (!matches || matches.length === 0) {
+            noMatches.style.display = 'block';
+            return;
+        }
+
+        matchedList.innerHTML = '';
+
+        matches.forEach((match, index) => {
+            const matchGroup = createMatchGroupElement(match, index);
+            matchedList.appendChild(matchGroup);
+        });
+    }
+
+    function createMatchGroupElement(match, index) {
+        const div = document.createElement('div');
+        div.className = 'match-group';
+
+        const matchType = match.match_type || 'unknown';
+        const confidence = (match.confidence || 0) * 100;
+        const revenue = match.revenue || {};
+        const expenses = match.expenses || [];
+
+        // Calculate balance
+        const revenueAmount = Math.abs(revenue.amount || 0);
+        const expenseTotal = expenses.reduce((sum, exp) => sum + Math.abs(exp.amount || 0), 0);
+        const balance = revenueAmount - expenseTotal;
+
+        // Confidence class
+        let confidenceClass = 'confidence-low';
+        if (confidence >= 90) confidenceClass = 'confidence-high';
+        else if (confidence >= 70) confidenceClass = 'confidence-medium';
+
+        div.innerHTML = `
+            <div class="match-header">
+                <div class="match-id">Match Group #${index + 1}</div>
+                <div>
+                    <span class="match-badge ${matchType}">${matchType.replace('_', ' ').toUpperCase()}</span>
+                    <span class="confidence-indicator ${confidenceClass}">${confidence.toFixed(1)}% Confidence</span>
+                </div>
+            </div>
+
+            <div class="transaction-item revenue">
+                <div class="transaction-desc">
+                    <strong>Revenue:</strong> ${revenue.description || 'N/A'}
+                </div>
+                <div class="transaction-amount positive">
+                    +${formatCurrency(revenueAmount)}
+                </div>
+            </div>
+
+            ${expenses.map(exp => `
+                <div class="transaction-item expense">
+                    <div class="transaction-desc">
+                        <strong>Expense:</strong> ${exp.description || 'N/A'}
+                    </div>
+                    <div class="transaction-amount negative">
+                        -${formatCurrency(Math.abs(exp.amount || 0))}
+                    </div>
+                </div>
+            `).join('')}
+
+            <div class="balance-summary ${Math.abs(balance) < 0.01 ? 'balance-zero' : 'balance-nonzero'}">
+                Balance: ${Math.abs(balance) < 0.01 ? '✓ Balanced (0.00)' : '⚠ ' + formatCurrency(balance)}
+            </div>
+        `;
+
+        return div;
+    }
+
+    function proceedToReview() {
+        window.location.href = '/review';
+    }
+
+    function proceedToExport() {
+        window.location.href = '/export_options';
+    }
+</script>
+{% endblock %}

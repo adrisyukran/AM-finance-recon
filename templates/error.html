@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Error - Finance Reconciliation{% endblock %}
+
+{% block navigation %}
+<div class="nav-steps">
+    <div class="step">
+        <div class="step-number">1</div>
+        <span>Upload File</span>
+    </div>
+    <div class="step">
+        <div class="step-number">2</div>
+        <span>Select Columns</span>
+    </div>
+    <div class="step">
+        <div class="step-number">3</div>
+        <span>Auto Match</span>
+    </div>
+    <div class="step">
+        <div class="step-number">4</div>
+        <span>Review</span>
+    </div>
+    <div class="step">
+        <div class="step-number">5</div>
+        <span>Export</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align: center; padding: 60px 40px;">
+    <div style="font-size: 5em; margin-bottom: 20px;">
+        {% if error == 'Page not found' %}
+            🔍
+        {% else %}
+            ⚠️
+        {% endif %}
+    </div>
+
+    <h1 style="color: #333; margin-bottom: 15px;">
+        {% if error == 'Page not found' %}
+            404 - Page Not Found
+        {% else %}
+            Oops! Something Went Wrong
+        {% endif %}
+    </h1>
+
+    <p style="color: #6c757d; font-size: 1.2em; margin-bottom: 30px;">
+        {{ error if error else 'An unexpected error occurred.' }}
+    </p>
+
+    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+        <button class="btn btn-primary" onclick="window.location.href='/'">
+            🏠 Go to Home
+        </button>
+        <button class="btn btn-secondary" onclick="window.history.back()">
+            ← Go Back
+        </button>
+        <button class="btn btn-secondary" onclick="window.location.href='/reset'">
+            🔄 Start Over
+        </button>
+    </div>
+
+    <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 10px; text-align: left;">
+        <h3 style="margin-bottom: 15px; color: #333;">Need Help?</h3>
+        <ul style="color: #6c757d; line-height: 2;">
+            <li>Make sure your file is in CSV or Excel format</li>
+            <li>Check that your file has the required columns</li>
+            <li>Ensure transaction amounts are in numeric format</li>
+            <li>Try refreshing the page and starting over</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+    .card h1 {
+        font-size: 2em;
+    }
+
+    .card p {
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    @media (max-width: 768px) {
+        .card {
+            padding: 40px 20px;
+        }
+
+        .card h1 {
+            font-size: 1.5em;
+        }
+    }
+</style>
+{% endblock %}

@@ -23,7 +23,13 @@ import uuid
 
 from config import Config
 from modules import FileHandler, EntityMatcher, BalanceCalculator, Exporter
+from flask_session import Session
 
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_FILE_DIR"] = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "data", "sessions"
+)
+Session(app)
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)

@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  neodeeai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: neodeeai-app
+    restart: unless-stopped
+    ports:
+      - "5003:5003"
+    volumes:
+      # Persist uploaded files
+      - uploads_data:/app/data/uploads
+      # Persist session data
+      - sessions_data:/app/data/sessions
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-your-production-secret-key-change-this}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5003/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  uploads_data:
+    driver: local
+  sessions_data:
+    driver: local
+
+networks:
+  default:
+    name: neodeeai-network

@@ -128,13 +128,13 @@ pip install -r requirements.txt
 python app.py
 ```
 
-The application will start at `http://localhost:5000`
+The application will start at `http://localhost:5003`
 -->
 <!--## 📖 Usage Guide
 
 ### Step 1: Upload Your File
 
-1. Open your browser and navigate to `http://localhost:5000`
+1. Open your browser and navigate to `http://localhost:5003`
 2. Click "Choose File" or drag and drop your CSV/Excel file
 3. Supported formats: `.csv`, `.xlsx`, `.xls`
 4. Click "Upload & Analyze File"

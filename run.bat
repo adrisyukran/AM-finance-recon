@@ -63,7 +63,7 @@ echo Starting Finance Reconciliation App
 echo ========================================
 echo.
 echo Open your browser and go to:
-echo http://localhost:5000
+echo http://localhost:5003
 echo.
 echo Press Ctrl+C to stop the server
 echo ========================================

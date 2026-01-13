@@ -260,7 +260,7 @@ pip install -r requirements.txt
 python app.py
 
 # 3. Open browser
-http://localhost:5000
+http://localhost:5003
 ```
 
 ### Or Use Run Scripts
@@ -438,7 +438,7 @@ A **fully functional, production-ready web application** that:
 ```bash
 pip install -r requirements.txt
 python app.py
-# Open http://localhost:5000
+# Open http://localhost:5003
 # Start reconciling!
 ```
 

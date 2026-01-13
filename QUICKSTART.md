@@ -21,7 +21,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Open your browser and navigate to: **http://localhost:5000**
+Open your browser and navigate to: **http://localhost:5003**
 
 ## 📝 First Reconciliation (3 minutes)
 

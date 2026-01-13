@@ -5,7 +5,7 @@ class Config:
     """Application configuration settings"""
 
     # Flask settings
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-in-production"
+    SECRET_KEY = os.environ.get("SECRET_KEY") 
 
     # File upload settings
     UPLOAD_FOLDER = os.path.join(
